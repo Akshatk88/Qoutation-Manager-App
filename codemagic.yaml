@@ -1,6 +1,6 @@
 workflows:
   ios-workflow:
-    name: iOS Build (Free)
+    name: iOS Build (Unsigned IPA)
     max_build_duration: 60
     instance_type: mac_mini_m1
 
@@ -11,11 +11,15 @@ workflows:
       - name: Get Flutter packages
         script: |
           flutter pub get
-
-      - name: Build iOS (no codesign)
+      - name: Build iOS (No Codesign)
         script: |
-          flutter build ios --no-codesign
+          flutter build ios --release --no-codesign
+      - name: Create Unsigned IPA
+        script: |
+          # Ye part aapke folder ko .ipa mein badal dega
+          mkdir -p build/ios/iphoneos/Payload
+          cp -r build/ios/iphoneos/Runner.app build/ios/iphoneos/Payload
+          cd build/ios/iphoneos && zip -r Runner.ipa Payload
 
     artifacts:
-      - build/ios/iphoneos/*.app
-      - build/ios/ipa/*.ipa
+      - build/ios/iphoneos/Runner.ipa
