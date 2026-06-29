@@ -1,227 +1,311 @@
-import 'package:flutter/material.dart';
+import 'dart:io';
+import 'dart:typed_data';
 
-class FinalSummaryScreen extends StatelessWidget {
+
+import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:pdf/pdf.dart';
+import 'package:pdf/widgets.dart' as pw;
+import 'package:printing/printing.dart';
+import 'package:share_plus/share_plus.dart';
+import 'package:flutter/services.dart' show rootBundle;
+
+
+class FinalScreen extends StatelessWidget {
+  final String qtnNumber;
   final String customerName;
   final String customerContact;
-  final String selectedPack;
-  final String cuvetteType;
+  final String customerAddress;
+
+  final double baseAmount;
+  final int totalCuvettes;
   final double cuvetteAmount;
   final double finalAmount;
+  final double grandTotal;
 
-  const FinalSummaryScreen({
-    super.key,
+  const FinalScreen({
+    Key? key,
+    required this.qtnNumber,
     required this.customerName,
     required this.customerContact,
-    required this.selectedPack,
-    required this.cuvetteType,
+    required this.customerAddress,
+    required this.baseAmount,
+    required this.totalCuvettes,
     required this.cuvetteAmount,
     required this.finalAmount,
-  });
+    required this.grandTotal,
+  }) : super(key: key);
 
-  void viewPdf(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("View PDF Clicked")),
+  pw.Widget tableCell(String text) {
+    return pw.Padding(
+      padding: const pw.EdgeInsets.all(6),
+      child: pw.Text(
+        text,
+        style: const pw.TextStyle(fontSize: 10),
+      ),
     );
   }
 
-  void sharePdf(BuildContext context) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Share PDF Clicked")),
+
+  Future<Uint8List> generatePdf() async {
+    final pdf = pw.Document();
+    final now = DateTime.now();
+    final date = "${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}";
+
+    pdf.addPage(
+      pw.MultiPage(
+        pageFormat: PdfPageFormat.a4,
+        margin: const pw.EdgeInsets.all(20),
+        build: (context) {
+          return [
+            // HEADER
+            pw.Center(
+              child: pw.Column(
+                children: [
+                  pw.Text(
+                    "CUTTING EDGE MEDICAL DEVICES PVT. LTD.",
+                    style: pw.TextStyle(
+                      fontSize: 16,
+                      fontWeight: pw.FontWeight.bold,
+                    ),
+                  ),
+                  pw.SizedBox(height: 4),
+                  pw.Text(
+                    "An ISO 13485:2016 Certified Medical Device Company",
+                    textAlign: pw.TextAlign.center,
+                  ),
+                  pw.SizedBox(height: 4),
+                  pw.Text("www.cemd.in"),
+                  pw.SizedBox(height: 4),
+                  pw.Text(
+                    "Regd. Office: E-2406, Sudama Nagar, Indore, MP",
+                    textAlign: pw.TextAlign.center,
+                  ),
+                  pw.Text(
+                    "Works: Electronics Complex Industrial Area, Pardeshipura, Indore",
+                    textAlign: pw.TextAlign.center,
+                  ),
+                  pw.Text(
+                    "Mob: 6261824078 | info@cemd.in",
+                    textAlign: pw.TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+            pw.SizedBox(height: 20),
+
+            pw.Row(
+              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+              children: [
+                pw.Text(
+                  "Quotation Number : $qtnNumber",
+                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                ),
+                pw.Text(
+                  "Date : $date",
+                  style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 15),
+
+            pw.Center(
+              child: pw.Text(
+                "QUOTATION",
+                style: pw.TextStyle(
+                  fontSize: 18,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+            ),
+            pw.SizedBox(height: 15),
+
+            pw.Text("To,"),
+            pw.SizedBox(height: 5),
+            pw.Text(
+              customerName,
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            ),
+            pw.Text(customerAddress),
+            pw.Text(customerContact),
+            pw.SizedBox(height: 15),
+
+            pw.Text("Ref: Quotation for the SCINTIGLO SG-100 with proprietary consumables"),
+            pw.SizedBox(height: 20),
+
+            // TABLE
+            pw.Table(
+              border: pw.TableBorder.all(color: PdfColors.black),
+              children: [
+                pw.TableRow(
+                  decoration: const pw.BoxDecoration(color: PdfColors.grey300),
+                  children: [
+                    tableCell("S.No"),
+                    tableCell("Item Name"),
+                    tableCell("Quantity"),
+                    tableCell("Amount"),
+                  ],
+                ),
+                pw.TableRow(
+                  children: [
+                    tableCell("1"),
+                    tableCell("SCINTIGLO SG-100 Device"),
+                    tableCell("1"),
+                    tableCell("₹ ${baseAmount.toStringAsFixed(2)}"),
+                  ],
+                ),
+                pw.TableRow(
+                  children: [
+                    tableCell("2"),
+                    tableCell("Consumables / Cuvettes"),
+                    tableCell(totalCuvettes.toString()),
+                    tableCell("₹ ${finalAmount.toStringAsFixed(2)}"),
+                  ],
+                ),
+              ],
+            ),
+            pw.SizedBox(height: 20),
+
+            // TOTAL SECTION
+            pw.Align(
+              alignment: pw.Alignment.centerRight,
+              child: pw.Container(
+                width: 250,
+                child: pw.Column(
+                  children: [
+                    pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        pw.Text("Device Amount"),
+                        pw.Text("₹ ${baseAmount.toStringAsFixed(2)}"),
+                      ],
+                    ),
+                    pw.SizedBox(height: 6),
+                    pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        pw.Text("Cuvette Amount"),
+                        pw.Text("₹ ${finalAmount.toStringAsFixed(2)}"),
+                      ],
+                    ),
+                    pw.SizedBox(height: 6),
+                    pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        pw.Text("Total Cuvettes"),
+                        pw.Text(totalCuvettes.toString()),
+                      ],
+                    ),
+                    pw.Divider(),
+                    pw.Row(
+                      mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
+                      children: [
+                        pw.Text(
+                          "GRAND TOTAL",
+                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                        ),
+                        pw.Text(
+                          "₹ ${grandTotal.toStringAsFixed(2)}",
+                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            pw.SizedBox(height: 25),
+
+            // TERMS & CONDITIONS
+            pw.Text(
+              "Terms & Conditions",
+              style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+            ),
+            pw.SizedBox(height: 5),
+            pw.Bullet(text: "Order can be fulfilled only after 100% advance payment."),
+            pw.Bullet(text: "Offer valid for 15 days from issue of quotation."),
+            pw.Bullet(text: "Product shall be delivered within 15 days of acceptance."),
+            pw.Bullet(text: "Training and installation support will be provided."),
+            pw.Bullet(text: "Transportation charges will be charged as applicable."),
+            pw.SizedBox(height: 40),
+
+            // SIGNATURE
+            pw.Align(
+              alignment: pw.Alignment.centerRight,
+              child: pw.Column(
+                crossAxisAlignment: pw.CrossAxisAlignment.center,
+                children: [
+                  pw.Text(
+                    "Regards",
+                    style: pw.TextStyle(fontWeight: pw.FontWeight.bold),
+                  ),
+                  pw.SizedBox(height: 10),
+                  pw.Text("Cutting Edge Medical Devices Pvt. Ltd."),
+                ],
+              ),
+            ),
+          ];
+        },
+      ),
     );
+
+    return pdf.save();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFEFF6F8), // SAME BACKGROUND
-      body: SafeArea(
+      appBar: AppBar(
+        title: const Text("Final Summary"),
+        backgroundColor: Colors.teal,
+        foregroundColor: Colors.white,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16),
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-
-            /// HEADER
-            Padding(
-              padding: const EdgeInsets.symmetric(
-                  horizontal: 20, vertical: 15),
-              child: Row(
-                children: const [
-                  Icon(Icons.receipt_long,
-                      color: Colors.teal),
-                  SizedBox(width: 10),
-                  Text(
-                    "Final Summary",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.teal,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            /// BODY
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(20),
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius:
-                    BorderRadius.circular(20),
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black12,
-                        blurRadius: 15,
-                      ),
-                    ],
-                  ),
-                  child: Column(
-                    crossAxisAlignment:
-                    CrossAxisAlignment.start,
-                    children: [
-
-                      const Text(
-                        "Quotation Details",
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.teal,
-                        ),
-                      ),
-
-                      const SizedBox(height: 25),
-
-                      buildDetailRow(
-                          "Customer Name", customerName),
-
-                      buildDetailRow(
-                          "Contact", customerContact),
-
-                      buildDetailRow(
-                          "Selected Pack", selectedPack),
-
-                      buildDetailRow(
-                        "Cuvette Amount",
-                        cuvetteType == "FREE"
-                            ? "FREE"
-                            : "₹ ${cuvetteAmount.toStringAsFixed(2)}",
-                      ),
-
-                      const SizedBox(height: 20),
-
-                      Divider(color: Colors.grey.shade300),
-
-                      const SizedBox(height: 10),
-
-                      /// FINAL AMOUNT HIGHLIGHT
-                      Container(
-                        width: double.infinity,
-                        padding:
-                        const EdgeInsets.all(15),
-                        decoration: BoxDecoration(
-                          color:
-                          const Color(0xFFE0F2F1),
-                          borderRadius:
-                          BorderRadius.circular(15),
-                        ),
-                        child: Text(
-                          "Final Amount: ₹ ${finalAmount.toStringAsFixed(2)}",
-                          style: const TextStyle(
-                            fontSize: 18,
-                            fontWeight:
-                            FontWeight.bold,
-                            color: Colors.teal,
-                          ),
-                        ),
-                      ),
-
-                      const SizedBox(height: 30),
-
-                      /// VIEW PDF
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          style:
-                          ElevatedButton.styleFrom(
-                            backgroundColor:
-                            Colors.teal,
-                            padding:
-                            const EdgeInsets
-                                .symmetric(
-                                vertical: 14),
-                            shape:
-                            RoundedRectangleBorder(
-                              borderRadius:
-                              BorderRadius
-                                  .circular(15),
-                            ),
-                          ),
-                          onPressed: () =>
-                              viewPdf(context),
-                          child:
-                          const Text("View PDF"),
-                        ),
-                      ),
-
-                      const SizedBox(height: 15),
-
-                      /// SHARE PDF
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton(
-                          style:
-                          ElevatedButton.styleFrom(
-                            backgroundColor:
-                            Colors.teal,
-                            padding:
-                            const EdgeInsets
-                                .symmetric(
-                                vertical: 14),
-                            shape:
-                            RoundedRectangleBorder(
-                              borderRadius:
-                              BorderRadius
-                                  .circular(15),
-                            ),
-                          ),
-                          onPressed: () =>
-                              sharePdf(context),
-                          child:
-                          const Text("Share PDF"),
-                        ),
-                      ),
-                    ],
+            Text("Quotation No: $qtnNumber"),
+            Text("Customer Name: $customerName"),
+            Text("Contact: $customerContact"),
+            Text("Address: $customerAddress"),
+            const SizedBox(height: 20),
+            Text("Total Cuvettes: $totalCuvettes"),
+            Text("Cuvette Amount: ₹$cuvetteAmount"),
+            Text("Final Amount: ₹$finalAmount"),
+            Text("Grand Total: ₹$grandTotal"),
+            const SizedBox(height: 30),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      final pdf = await generatePdf();
+                      await Printing.layoutPdf(onLayout: (_) => pdf);
+                    },
+                    child: const Text("View PDF"),
                   ),
                 ),
-              ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      final pdf = await generatePdf();
+                      final dir = await getTemporaryDirectory();
+                      final file = File("${dir.path}/quotation.pdf");
+                      await file.writeAsBytes(pdf);
+                      await Share.shareXFiles(
+                        [XFile(file.path)],
+                        text: "Quotation PDF",
+                      );
+                    },
+                    child: const Text("Share"),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  /// REUSABLE DETAIL ROW
-  Widget buildDetailRow(String title, String value) {
-    return Padding(
-      padding:
-      const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Expanded(
-            flex: 4,
-            child: Text(
-              "$title:",
-              style: const TextStyle(
-                  fontWeight: FontWeight.w600),
-            ),
-          ),
-          Expanded(
-            flex: 6,
-            child: Text(value),
-          ),
-        ],
       ),
     );
   }

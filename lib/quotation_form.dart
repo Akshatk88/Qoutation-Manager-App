@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'price_calculation_screen.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:country_picker/country_picker.dart';
 
 class QuotationForm extends StatefulWidget {
   const QuotationForm({super.key});
@@ -10,29 +13,14 @@ class QuotationForm extends StatefulWidget {
 
 class _QuotationFormState extends State<QuotationForm> {
 
+  final TextEditingController quotationController = TextEditingController();
   final TextEditingController nameController = TextEditingController();
   final TextEditingController contactController = TextEditingController();
   final TextEditingController addressController = TextEditingController();
 
-  // Country Code
   String selectedCountryCode = "+91";
+  String selectedFlag = "🇮🇳";
 
-  final List<String> countryCodes = [
-    "+91 (Ind)",
-    "+1 (USA)",
-    "+44 (UK)",
-    "+61 (Aus)",
-    "+971 (UAE)",
-    "+81 (Jap)",
-    "+49 (Ger)",
-    "+33 (Fra)",
-    "+55 (Bra)",
-    "+65 (Sin)",
-    "+39 (Ita)",
-    "+62 (Indo)"
-  ];
-
-  // Customer Type
   String selectedCustomerType = "Hospital";
 
   final List<String> customerTypes = [
@@ -43,40 +31,122 @@ class _QuotationFormState extends State<QuotationForm> {
     "Others",
   ];
 
+  // ================= QUOTATION NUMBER GENERATOR =================
+  void generateQuotationNumber() {
+    final now = DateTime.now();
+    final number = now.millisecondsSinceEpoch.toString().substring(10);
+     quotationController.text = "CEMD-Q/25-26/$number";
+  }
+
+  // ================= LOCATION FUNCTION =================
+  Future<void> getCurrentLocation() async {
+    try {
+      bool serviceEnabled;
+      LocationPermission permission;
+
+      serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Please enable location services")),
+        );
+        return;
+      }
+
+      permission = await Geolocator.checkPermission();
+
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Location permission denied")),
+          );
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Location permission permanently denied"),
+          ),
+        );
+        return;
+      }
+
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.bestForNavigation,
+        forceAndroidLocationManager: true,
+        timeLimit: const Duration(seconds: 20),
+      );
+
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (placemarks.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Unable to fetch address")),
+        );
+        return;
+      }
+
+      Placemark place = placemarks.first;
+
+      String fullAddress = [
+        place.name,
+        place.street,
+        place.subLocality,
+        place.locality,
+        place.subAdministrativeArea,
+        place.administrativeArea,
+        place.postalCode,
+        place.country,
+      ].where((element) => element != null && element!.isNotEmpty).join(", ");
+
+      setState(() {
+        addressController.text = fullAddress;
+      });
+
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to fetch location")),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFEFF6F8),
+      backgroundColor: const Color(0xFF5D8F8A),
       body: SafeArea(
         child: Column(
           children: [
 
-            // ================= HEADER =================
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
               child: Row(
                 children: const [
-                  Icon(Icons.description, color: Colors.teal),
+                  Icon(Icons.description, color: Colors.white),
                   SizedBox(width: 10),
                   Text(
                     "New Quotation",
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
-                      color: Colors.teal,
+                      color: Colors.white,
                     ),
                   ),
                 ],
               ),
             ),
 
-            // ================= BODY =================
             Expanded(
               child: Container(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     colors: [
-                      Color(0xFFD8EEF3),
+                      Color(0xFF779DA8),
                       Colors.white,
                     ],
                     begin: Alignment.topCenter,
@@ -112,9 +182,49 @@ class _QuotationFormState extends State<QuotationForm> {
                               ),
                             ),
 
+                            const SizedBox(height: 20),
+
+                            // ================= QUOTATION NUMBER =================
+                            Row(
+                              children: [
+
+                                Expanded(
+                                  flex: 7,
+                                  child: TextField(
+                                    controller: quotationController,
+                                    decoration: InputDecoration(
+                                      prefixIcon: const Icon(Icons.confirmation_number, color: Colors.teal),
+                                      labelText: "Qtn No.",
+                                      labelStyle: const TextStyle(color: Colors.teal),
+                                      border: OutlineInputBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      focusedBorder: OutlineInputBorder(
+                                        borderSide: const BorderSide(color: Colors.teal, width: 2),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+
+                                const SizedBox(width: 10),
+
+                                ElevatedButton(
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.teal,
+                                    minimumSize: const Size(80, 55),
+                                  ),
+                                  onPressed: generateQuotationNumber,
+                                  child: const Text(
+                                    "Auto",
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                                ),
+                              ],
+                            ),
+
                             const SizedBox(height: 25),
 
-                            // Customer Name
                             buildTextField(
                               controller: nameController,
                               label: "Customer Name",
@@ -123,37 +233,56 @@ class _QuotationFormState extends State<QuotationForm> {
 
                             const SizedBox(height: 20),
 
-                            // Contact Number Row
                             Row(
                               children: [
 
-                                // Country Code (40%)
                                 Expanded(
                                   flex: 4,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10),
-                                    decoration: BoxDecoration(
-                                      border: Border.all(color: Colors.teal),
-                                      borderRadius: BorderRadius.circular(12),
-                                    ),
-                                    child: DropdownButtonHideUnderline(
-                                      child: DropdownButton<String>(
-                                        value: selectedCountryCode,
-                                        isExpanded: true,
-                                        items: countryCodes.map((code) {
-                                          return DropdownMenuItem(
-                                            value: code.split(" ")[0],
-                                            child: Text(
-                                              code,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                          );
-                                        }).toList(),
-                                        onChanged: (value) {
+                                  child: InkWell(
+                                    onTap: () {
+                                      showCountryPicker(
+                                        context: context,
+                                        showPhoneCode: true,
+                                        onSelect: (Country country) {
                                           setState(() {
-                                            selectedCountryCode = value!;
+                                            selectedCountryCode = "+${country.phoneCode}";
+                                            selectedFlag = country.flagEmoji;
                                           });
                                         },
+                                      );
+                                    },
+                                    child: Container(
+                                      height: 60,
+                                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                                      decoration: BoxDecoration(
+                                        border: Border.all(color: Colors.teal),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.start,
+                                        children: [
+
+                                          Text(
+                                            selectedFlag,
+                                            style: const TextStyle(fontSize: 18),
+                                          ),
+
+                                          const SizedBox(width: 4),
+
+                                          Flexible(
+                                            child: Text(
+                                              selectedCountryCode,
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                          ),
+
+                                          const Icon(Icons.arrow_drop_down, size: 20),
+
+                                        ],
                                       ),
                                     ),
                                   ),
@@ -161,7 +290,6 @@ class _QuotationFormState extends State<QuotationForm> {
 
                                 const SizedBox(width: 12),
 
-                                // Contact Number (60%)
                                 Expanded(
                                   flex: 6,
                                   child: buildTextField(
@@ -173,83 +301,59 @@ class _QuotationFormState extends State<QuotationForm> {
                                 ),
                               ],
                             ),
-
                             const SizedBox(height: 20),
 
-                            // Address
-                            buildTextField(
+                            TextField(
                               controller: addressController,
-                              label: "Customer Address",
-                              icon: Icons.location_on,
                               maxLines: 3,
-                            ),
-
-                            const SizedBox(height: 20),
-
-                            // Customer Type Dropdown
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 15),
-                              decoration: BoxDecoration(
-                                border: Border.all(color: Colors.teal),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: DropdownButtonHideUnderline(
-                                child: DropdownButton<String>(
-                                  value: selectedCustomerType,
-                                  isExpanded: true,
-                                  icon: const Icon(Icons.arrow_drop_down, color: Colors.teal),
-                                  items: customerTypes.map((type) {
-                                    return DropdownMenuItem(
-                                      value: type,
-                                      child: Text(type),
-                                    );
-                                  }).toList(),
-                                  onChanged: (value) {
-                                    setState(() {
-                                      selectedCustomerType = value!;
-                                    });
-                                  },
+                              decoration: InputDecoration(
+                                suffixIcon: IconButton(
+                                  icon: const Icon(Icons.location_on,
+                                      color: Colors.teal),
+                                  onPressed: getCurrentLocation,
+                                ),
+                                labelText: "Customer Address",
+                                labelStyle:
+                                const TextStyle(color: Colors.teal),
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
                             ),
 
                             const SizedBox(height: 30),
 
-                            // NEXT BUTTON
-                            GestureDetector(
-                              onTap: () {
+                            ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.teal,
+                                minimumSize:
+                                const Size(double.infinity, 55),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius:
+                                  BorderRadius.circular(15),
+                                ),
+                              ),
+                              onPressed: () {
                                 Navigator.push(
                                   context,
                                   MaterialPageRoute(
                                     builder: (_) => PriceCalculationScreen(
+                                      quotationNumber: quotationController.text,
                                       customerName: nameController.text,
                                       customerContact:
                                       "$selectedCountryCode ${contactController.text}",
+                                      customerAddress:
+                                      addressController.text,
                                     ),
                                   ),
                                 );
                               },
-                              child: Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.symmetric(vertical: 16),
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [
-                                      Colors.teal,
-                                      Color(0xFF009688),
-                                    ],
-                                  ),
-                                  borderRadius: BorderRadius.circular(15),
-                                ),
-                                child: const Center(
-                                  child: Text(
-                                    "Next",
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
+                              child: const Text(
+                                "Next",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
                                 ),
                               ),
                             ),
@@ -269,7 +373,6 @@ class _QuotationFormState extends State<QuotationForm> {
     );
   }
 
-  // ================= REUSABLE TEXTFIELD =================
   Widget buildTextField({
     required TextEditingController controller,
     required String label,
@@ -285,12 +388,7 @@ class _QuotationFormState extends State<QuotationForm> {
         prefixIcon: Icon(icon, color: Colors.teal),
         labelText: label,
         labelStyle: const TextStyle(color: Colors.teal),
-        focusedBorder: OutlineInputBorder(
-          borderSide: const BorderSide(color: Colors.teal, width: 2),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderSide: const BorderSide(color: Colors.teal),
+        border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
         ),
       ),

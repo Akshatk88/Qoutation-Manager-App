@@ -2,6 +2,7 @@ import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:quotation_app/quotation_form.dart';
 import 'quotation_form.dart';
+import 'tax_invoice_form.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -26,12 +27,10 @@ class _HomeScreenState extends State<HomeScreen>
       duration: const Duration(seconds: 4),
     )..repeat();
 
-    // ECG Left → Right Animation
     ecgAnimation = Tween<double>(begin: -200, end: 200).animate(
       CurvedAnimation(parent: _controller, curve: Curves.linear),
     );
 
-    // Fade Animation for Text
     fadeAnimation = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(parent: _controller, curve: Curves.easeIn),
     );
@@ -46,7 +45,7 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFEFF6F8),
+      backgroundColor: const Color(0xFF5D8F8A),
       body: SafeArea(
         child: Column(
           children: [
@@ -61,9 +60,9 @@ class _HomeScreenState extends State<HomeScreen>
                   const Text(
                     "Cutting Edge Medical Devices",
                     style: TextStyle(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w600,
-                      color: Colors.teal,
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
                     ),
                   ),
                 ],
@@ -86,75 +85,53 @@ class _HomeScreenState extends State<HomeScreen>
                 ),
                 child: Stack(
                   alignment: Alignment.center,
-                  children: [
+                  children: <Widget>[
 
-                    // // Animated ECG (Left → Right)
-                    // AnimatedBuilder(
-                    //   animation: ecgAnimation,
-                    //   builder: (_, child) {
-                    //     return Positioned(
-                    //       top: 120,
-                    //       left: ecgAnimation.value,
-                    //       child: Opacity(
-                    //         opacity: 0.25,
-                    //         child: Image.asset(
-                    //           "assets/images/ecg.png",
-                    //           width: 150,
-                    //         ),
-                    //       ),
-                    //     );
-                    //   },
-                    // ),
-
-                    Column(
-                      mainAxisAlignment: MainAxisAlignment.start,
-                      children: [
-
-                        const SizedBox(height: 25),
-
-                        // Medium Device Image Centered
-                        Image.asset(
-                          "assets/images/device.png",
-                          height: 160,
-                        ),
-
-                        const SizedBox(height: 25),
-
-                        // Fade Text Section
-                        FadeTransition(
-                          opacity: fadeAnimation,
-                          child: const Column(
-                            children: [
-                              Text(
-                                "SCINTIGLO",
-                                style: TextStyle(
-                                  fontSize: 28,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.teal,
-                                  letterSpacing: 1.5,
-                                ),
-                              ),
-                              SizedBox(height: 6),
-                              Text(
-                                "Smart Diagnostic Portal",
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.black54,
-                                ),
-                              ),
-                              SizedBox(height: 20),
-                              Text(
-                                "Empowering Diagnostics through Innovation.",
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  color: Colors.black45,
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
+                    AnimatedBuilder(
+                      animation: _controller,
+                      builder: (context, child) {
+                        return Transform.translate(
+                          offset: Offset(ecgAnimation.value, 0),
+                          child: Opacity(
+                            opacity: 0.15,
+                            child: Image.asset(
+                              "assets/images/ecg.png",
+                              height: 230,
+                              fit: BoxFit.contain,
+                            ),
                           ),
-                        ),
-                      ],
+                        );
+                      },
+                    ),
+
+                    Image.asset(
+                      "assets/images/device.png",
+                      height: 190,
+                    ),
+
+                    FadeTransition(
+                      opacity: fadeAnimation,
+                      child: const Column(
+                        children: [
+                          Text(
+                            "SCINTIGLO",
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.teal,
+                              letterSpacing: 1.5,
+                            ),
+                          ),
+                          SizedBox(height: 200),
+                          Text(
+                            "Smart Diagnostic Portal",
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: Colors.black54,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ],
                 ),
@@ -178,10 +155,8 @@ class _HomeScreenState extends State<HomeScreen>
               ),
               child: Column(
                 children: [
-                  buildButton(context, "Challan", Icons.local_shipping, () {}),
-                  const SizedBox(height: 15),
-                  buildButton(context, "Bill", Icons.receipt_long, () {}),
-                  const SizedBox(height: 15),
+
+                  // 1️⃣ Quotation First
                   buildButton(context, "Quotation", Icons.description, () {
                     Navigator.push(
                       context,
@@ -190,6 +165,34 @@ class _HomeScreenState extends State<HomeScreen>
                       ),
                     );
                   }),
+
+                  const SizedBox(height: 15),
+
+                  // 2️⃣ Bill Invoice
+                  buildButton(context, "Proforma Invoice", Icons.receipt_long, () {}),
+
+                  const SizedBox(height: 15),
+
+                  // 3️⃣ Challan
+                  buildButton(context, "Challan", Icons.local_shipping, () {}),
+
+                  const SizedBox(height: 15),
+                  // Tax Invoice
+                buildButton(
+                  context,
+                  "Tax Invoice",
+                  Icons.receipt_long,
+                      () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => const TaxInvoiceForm(),
+                      ),
+                    );
+                  },
+                ),
+                  const SizedBox(height: 15),
+
                 ],
               ),
             ),
@@ -205,28 +208,35 @@ class _HomeScreenState extends State<HomeScreen>
       IconData icon,
       VoidCallback onTap,
       ) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(vertical: 18),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: Colors.teal, width: 1.5),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, color: Colors.teal),
-            const SizedBox(width: 10),
-            Text(
-              text,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(15),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(15),
+        splashColor: Colors.teal.withOpacity(0.2),
+        highlightColor: Colors.teal.withOpacity(0.1),
+        onTap: onTap,
+        child: Ink(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 18),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(15),
+            border: Border.all(color: Colors.teal, width: 1.5),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: Colors.teal),
+              const SizedBox(width: 10),
+              Text(
+                text,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -1,27 +1,36 @@
 import 'package:flutter/material.dart';
-import 'final_screen.dart';
+import 'final_invoice_screen.dart';
 
-class CuvetteScreen extends StatefulWidget {
-  final String QtnNumber;
+class CuvettePricingScreen extends StatefulWidget {
+  final String invoiceNumber;
   final String customerName;
   final String customerContact;
   final String customerAddress;
-  final double baseAmount;
 
-  const CuvetteScreen({
-    Key? key,
-    required this.QtnNumber,
-    required this.customerName,
-    required this.customerContact,
-    required this.customerAddress,
-    required this.baseAmount,
+  final double deviceAmount;
+  final double devicePrice;
+  final int deviceQty;
+  final double deviceDiscount;
+  final double deviceGst;
+
+  const CuvettePricingScreen({
+  Key? key,
+  required this.invoiceNumber,
+  required this.customerName,
+  required this.customerContact,
+  required this.customerAddress,
+  required this.deviceAmount,
+  required this.devicePrice,
+  required this.deviceQty,
+  required this.deviceDiscount,
+  required this.deviceGst,
   }) : super(key: key);
 
   @override
-  State<CuvetteScreen> createState() => _CuvetteScreenState();
+  State<CuvettePricingScreen> createState() => _CuvetteScreenState();
 }
 
-class _CuvetteScreenState extends State<CuvetteScreen> {
+class _CuvetteScreenState extends State<CuvettePricingScreen> {
 
   int free50 = 0;
   int free100 = 0;
@@ -321,18 +330,28 @@ class _CuvetteScreenState extends State<CuvetteScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => FinalScreen(
-          qtnNumber: widget.QtnNumber,
+        builder: (context) => FinalInvoiceScreen(
+          invoiceNumber: widget.invoiceNumber,
+
           customerName: widget.customerName,
           customerContact: widget.customerContact,
           customerAddress: widget.customerAddress,
 
-          baseAmount: widget.baseAmount,
-          totalCuvettes: totalCuvettes,
+          devicePrice: widget.devicePrice,
+          deviceQty: widget.deviceQty,
+          deviceDiscount: widget.deviceDiscount,
+          deviceGst: widget.deviceGst,
 
-          cuvetteAmount: paidAmount,
-          finalAmount: finalAmount,
-          grandTotal: widget.baseAmount + finalAmount,
+          cuvettePrice: paidAmount,
+          cuvetteQty: totalCuvettes,
+          cuvetteDiscount: discountPercent,
+          cuvetteGst: gstPercent,
+
+          deviceAmount: widget.deviceAmount,
+          cuvetteAmount: finalAmount,
+
+          grandTotal:
+          widget.deviceAmount + finalAmount,
         ),
       ),
     );
@@ -341,7 +360,7 @@ class _CuvetteScreenState extends State<CuvetteScreen> {
   Widget build(BuildContext context) {
 
     double grandTotal =
-        widget.baseAmount + finalAmount;
+        widget.deviceAmount + finalAmount;
 
     return Scaffold(
 
@@ -398,7 +417,7 @@ class _CuvetteScreenState extends State<CuvetteScreen> {
                   children: [
 
                     Text(
-                      "Quotation Number: ${widget.QtnNumber}",
+                      "Invoice Number: ${widget.invoiceNumber}",
                       style: const TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.bold,
